@@ -1,566 +1,200 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Detail Alat Kesehatan — RS TNI AU</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-<style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  :root {
-    --navy: #0D1F3C; --navy2: #1B3A6B;
-    --blue: #2563EB; --blue-l: #EFF6FF; --blue-b: #BFDBFE;
-    --green: #15803D; --green-l: #F0FDF4;
-    --amber: #B45309; --amber-l: #FFFBEB; --amber-b: #FDE68A;
-    --red: #DC2626; --red-l: #FEF2F2;
-    --gray-50:#F8FAFC; --gray-100:#F1F5F9; --gray-200:#E2E8F0;
-    --gray-400:#94A3B8; --gray-600:#475569; --gray-800:#1E293B;
-    --r: 14px; --rs: 8px;
-  }
-  body { font-family:'DM Sans',sans-serif; background:var(--gray-50); color:var(--gray-800); min-height:100vh; padding-bottom:60px; }
-
-  /* ── Loading ── */
-  #loading { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh; gap:16px; }
-  .spinner { width:36px; height:36px; border:3px solid var(--gray-200); border-top-color:var(--blue); border-radius:50%; animation:spin 0.8s linear infinite; }
-  @keyframes spin { to { transform:rotate(360deg); } }
-  #loading p { font-size:13px; color:var(--gray-400); }
-
-  /* ── Error ── */
-  #error-state { display:none; padding:40px 24px; text-align:center; }
-  #error-state h2 { font-size:18px; font-weight:600; color:var(--red); margin-bottom:8px; }
-  #error-state p { font-size:13px; color:var(--gray-600); }
-
-  /* ── Main ── */
-  #main { display:none; }
-
-  /* Header */
-  .hdr { background:var(--navy); padding:20px 20px 0; position:relative; overflow:hidden; }
-  .hdr::before { content:''; position:absolute; top:-40px; right:-40px; width:180px; height:180px; border-radius:50%; background:rgba(37,99,235,.15); }
-  .hdr-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; position:relative; z-index:1; }
-  .logo { display:flex; align-items:center; gap:8px; }
-  .logo-icon { width:32px; height:32px; background:rgba(255,255,255,.12); border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:16px; }
-  .logo-txt { font-size:11px; font-weight:500; color:rgba(255,255,255,.55); letter-spacing:.05em; text-transform:uppercase; }
-  .kode-badge { font-family:'DM Mono',monospace; font-size:10px; padding:4px 10px; background:rgba(37,99,235,.3); color:#93C5FD; border-radius:100px; border:1px solid rgba(37,99,235,.4); }
-  .hdr-name { position:relative; z-index:1; margin-bottom:16px; }
-  .hdr-name h1 { font-size:22px; font-weight:600; color:#fff; line-height:1.2; margin-bottom:4px; }
-  .hdr-sub { font-family:'DM Mono',monospace; font-size:11px; color:rgba(255,255,255,.4); }
-
-  /* Photo area */
-  .photo-area { margin:0 -20px; height:160px; background:#1a2f4e; display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden; }
-  .photo-area img { width:100%; height:100%; object-fit:cover; opacity:.85; }
-  .photo-placeholder { display:flex; flex-direction:column; align-items:center; gap:8px; opacity:.35; }
-  .photo-placeholder svg { width:44px; height:44px; }
-  .photo-placeholder span { font-size:11px; color:#fff; letter-spacing:.05em; }
-  .photo-upload-btn { position:absolute; bottom:10px; right:12px; font-size:11px; color:rgba(255,255,255,.7); background:rgba(0,0,0,.35); padding:4px 10px; border-radius:100px; border:none; cursor:pointer; }
-
-  /* Status bar */
-  .status-bar { margin:0 16px; transform:translateY(-18px); background:#fff; border-radius:var(--r); padding:14px 16px; display:flex; align-items:center; justify-content:space-between; box-shadow:0 4px 20px rgba(0,0,0,.08); border:1px solid var(--gray-200); }
-  .status-pill { display:flex; align-items:center; gap:7px; font-size:13px; font-weight:600; }
-  .dot { width:9px; height:9px; border-radius:50%; flex-shrink:0; }
-  .dot.baik { background:#22C55E; box-shadow:0 0 0 3px #DCFCE7; }
-  .dot.warn { background:#F59E0B; box-shadow:0 0 0 3px #FEF3C7; }
-  .dot.rusak { background:#EF4444; box-shadow:0 0 0 3px #FEE2E2; }
-  .lbl-baik { color:var(--green); } .lbl-warn { color:var(--amber); } .lbl-rusak { color:var(--red); }
-  .kalib-r { text-align:right; }
-  .kalib-r .kd { font-size:12px; font-weight:600; }
-  .kalib-r .kl { font-size:10px; color:var(--gray-400); margin-top:1px; }
-
-  /* Kalibrasi card */
-  .kalib-card { margin:0 16px 12px; border-radius:var(--r); overflow:hidden; border:1px solid var(--gray-200); }
-  .kalib-hdr { background:var(--amber-l); padding:10px 14px; display:flex; align-items:center; gap:8px; border-bottom:1px solid var(--amber-b); }
-  .kalib-hdr span { font-size:12px; font-weight:600; color:var(--amber); text-transform:uppercase; letter-spacing:.05em; }
-  .kalib-body { background:#fff; padding:12px 14px; display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-  .ki label { font-size:10px; color:var(--gray-400); text-transform:uppercase; letter-spacing:.06em; display:block; margin-bottom:3px; }
-  .ki .v { font-size:13px; font-weight:600; color:var(--gray-800); }
-  .ki .v.warn { color:var(--amber); } .ki .v.ok { color:var(--green); } .ki .v.late { color:var(--red); }
-  .sisa-bar { margin:0 14px 12px; height:4px; background:var(--gray-200); border-radius:100px; overflow:hidden; }
-  .sisa-fill { height:100%; border-radius:100px; transition:width .5s; }
-
-  /* Section */
-  .sec { margin:0 16px 12px; background:#fff; border-radius:var(--r); border:1px solid var(--gray-200); overflow:hidden; }
-  .sec-hdr { padding:12px 14px 10px; display:flex; align-items:center; gap:8px; border-bottom:1px solid var(--gray-100); }
-  .sec-icon { width:28px; height:28px; background:var(--blue-l); border-radius:7px; display:flex; align-items:center; justify-content:center; font-size:14px; }
-  .sec-title { font-size:12px; font-weight:600; color:var(--gray-600); text-transform:uppercase; letter-spacing:.05em; }
-  .info-row { display:flex; align-items:flex-start; padding:10px 14px; border-bottom:1px solid var(--gray-100); gap:12px; }
-  .info-row:last-child { border-bottom:none; }
-  .ik { font-size:11px; color:var(--gray-400); width:110px; flex-shrink:0; padding-top:1px; }
-  .iv { font-size:13px; font-weight:500; flex:1; }
-  .iv.mono { font-family:'DM Mono',monospace; font-size:12px; color:var(--blue); }
-
-  /* Riwayat */
-  .rw-item { display:flex; gap:12px; padding:12px 14px; border-bottom:1px solid var(--gray-100); }
-  .rw-item:last-child { border-bottom:none; }
-  .rw-dot-w { display:flex; flex-direction:column; align-items:center; padding-top:3px; }
-  .rw-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
-  .rw-dot.k { background:var(--blue); } .rw-dot.r { background:var(--green); } .rw-dot.x { background:var(--red); }
-  .rw-line { width:1px; flex:1; background:var(--gray-200); margin-top:4px; min-height:16px; }
-  .rw-content { flex:1; }
-  .rw-tgl { font-size:10px; color:var(--gray-400); font-family:'DM Mono',monospace; margin-bottom:2px; }
-  .rw-jenis { font-size:13px; font-weight:600; margin-bottom:2px; }
-  .rw-ket { font-size:11px; color:var(--gray-600); line-height:1.5; }
-  .rw-badge { display:inline-block; font-size:10px; font-weight:600; padding:2px 8px; border-radius:100px; margin-top:5px; }
-  .rw-badge.ok { background:var(--green-l); color:var(--green); }
-  .rw-badge.warn { background:var(--amber-l); color:var(--amber); }
-  .rw-badge.err { background:var(--red-l); color:var(--red); }
-  .empty-rw { padding:20px 14px; text-align:center; font-size:12px; color:var(--gray-400); }
-
-  /* PJ */
-  .pj-row { display:flex; align-items:center; gap:12px; padding:12px 14px; }
-  .pj-av { width:38px; height:38px; border-radius:50%; background:var(--blue-l); display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:600; color:var(--blue); flex-shrink:0; }
-  .pj-name { font-size:13px; font-weight:600; }
-  .pj-role { font-size:11px; color:var(--gray-400); margin-top:1px; }
-
-  /* FORM tambah catatan */
-  .form-wrap { margin:0 16px 12px; }
-  .form-toggle { width:100%; padding:12px 16px; background:#fff; border:1px solid var(--gray-200); border-radius:var(--r); text-align:center; font-size:13px; font-weight:600; color:var(--blue); cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; }
-  .form-toggle:hover { background:var(--blue-l); }
-  .form-panel { display:none; background:#fff; border:1px solid var(--blue-b); border-radius:var(--r); overflow:hidden; margin-top:8px; }
-  .form-panel.open { display:block; }
-  .form-hdr { background:var(--blue-l); padding:12px 14px; border-bottom:1px solid var(--blue-b); }
-  .form-hdr span { font-size:12px; font-weight:600; color:var(--navy2); text-transform:uppercase; letter-spacing:.05em; }
-  .form-body { padding:14px; display:flex; flex-direction:column; gap:12px; }
-  .f-group label { font-size:11px; font-weight:600; color:var(--gray-600); display:block; margin-bottom:5px; text-transform:uppercase; letter-spacing:.04em; }
-  .f-group input, .f-group select, .f-group textarea {
-    width:100%; padding:10px 12px; font-size:13px; font-family:'DM Sans',sans-serif;
-    border:1px solid var(--gray-200); border-radius:var(--rs);
-    background:#fff; color:var(--gray-800); outline:none;
-  }
-  .f-group input:focus, .f-group select:focus, .f-group textarea:focus { border-color:var(--blue); }
-  .f-group textarea { min-height:80px; resize:vertical; }
-  .f-group.half { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-  .form-actions { display:flex; gap:10px; }
-  .btn-submit { flex:1; padding:12px; background:var(--blue); color:#fff; font-size:13px; font-weight:600; border:none; border-radius:var(--rs); cursor:pointer; font-family:'DM Sans',sans-serif; }
-  .btn-submit:hover { background:#1d4ed8; }
-  .btn-submit:disabled { background:var(--gray-400); cursor:not-allowed; }
-  .btn-cancel { padding:12px 16px; background:#fff; color:var(--gray-600); font-size:13px; border:1px solid var(--gray-200); border-radius:var(--rs); cursor:pointer; font-family:'DM Sans',sans-serif; }
-  .toast { display:none; margin:0 16px 12px; padding:12px 14px; border-radius:var(--rs); font-size:13px; font-weight:500; }
-  .toast.ok { background:var(--green-l); color:var(--green); border:1px solid #86EFAC; display:block; }
-  .toast.err { background:var(--red-l); color:var(--red); border:1px solid #FCA5A5; display:block; }
-
-  /* Footer */
-  .footer { margin:20px 16px 0; text-align:center; font-size:10px; color:var(--gray-400); line-height:1.8; }
-  .footer strong { color:var(--gray-600); }
-
-  /* Animasi */
-  @keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
-  .anim { animation:fadeUp .3s ease both; }
-</style>
-</head>
-<body>
-
-<!-- LOADING -->
-<div id="loading">
-  <div class="spinner"></div>
-  <p>Memuat data alat...</p>
-</div>
-
-<!-- ERROR -->
-<div id="error-state">
-  <h2>⚠️ Alat tidak ditemukan</h2>
-  <p id="error-msg">Kode alat tidak valid atau terjadi kesalahan koneksi.</p>
-</div>
-
-<!-- MAIN CONTENT -->
-<div id="main">
-
-  <!-- HEADER -->
-  <div class="hdr">
-    <div class="hdr-top">
-      <div class="logo">
-        <div class="logo-icon">🏥</div>
-        <span class="logo-txt">RS TNI AU</span>
-      </div>
-      <span class="kode-badge" id="kode-badge">—</span>
-    </div>
-    <div class="hdr-name">
-      <h1 id="nama-alat">—</h1>
-      <div class="hdr-sub" id="sub-alat">—</div>
-    </div>
-    <div class="photo-area" id="photo-area">
-      <div class="photo-placeholder">
-        <svg viewBox="0 0 48 48" fill="none" stroke="white" stroke-width="1.5">
-          <rect x="4" y="10" width="40" height="30" rx="4"/>
-          <circle cx="24" cy="25" r="8"/>
-          <circle cx="38" cy="16" r="2" fill="white"/>
-        </svg>
-        <span>FOTO ALAT</span>
-      </div>
-    </div>
-  </div>
-
-  <!-- STATUS BAR -->
-  <div class="status-bar anim">
-    <div class="status-pill">
-      <div class="dot" id="status-dot"></div>
-      <span id="status-label">—</span>
-    </div>
-    <div class="kalib-r">
-      <div class="kd" id="kalib-next-top">—</div>
-      <div class="kl">Kalibrasi berikutnya</div>
-    </div>
-  </div>
-
-  <!-- JADWAL KALIBRASI -->
-  <div class="kalib-card anim">
-    <div class="kalib-hdr">
-      <span>📅 Jadwal Kalibrasi</span>
-    </div>
-    <div class="kalib-body">
-      <div class="ki"><label>Kalibrasi Terakhir</label><div class="v" id="kalib-last">—</div></div>
-      <div class="ki"><label>Kalibrasi Berikutnya</label><div class="v" id="kalib-next">—</div></div>
-      <div class="ki"><label>Sisa Hari</label><div class="v" id="sisa-hari">—</div></div>
-      <div class="ki"><label>Status</label><div class="v" id="status-kalib">—</div></div>
-    </div>
-    <div class="sisa-bar"><div class="sisa-fill" id="sisa-fill"></div></div>
-  </div>
-
-  <!-- INFO ALAT -->
-  <div class="sec anim">
-    <div class="sec-hdr"><div class="sec-icon">🔧</div><span class="sec-title">Informasi Alat</span></div>
-    <div class="info-row"><span class="ik">Nama Alat</span><span class="iv" id="i-nama">—</span></div>
-    <div class="info-row"><span class="ik">Kode Alat</span><span class="iv mono" id="i-kode">—</span></div>
-    <div class="info-row"><span class="ik">Merek / Model</span><span class="iv" id="i-merek">—</span></div>
-    <div class="info-row"><span class="ik">Nomor Seri</span><span class="iv mono" id="i-seri">—</span></div>
-    <div class="info-row"><span class="ik">Kategori</span><span class="iv" id="i-kat">—</span></div>
-    <div class="info-row"><span class="ik">Ruangan</span><span class="iv" id="i-ruang">—</span></div>
-    <div class="info-row"><span class="ik">Tahun Pengadaan</span><span class="iv" id="i-tahun">—</span></div>
-    <div class="info-row"><span class="ik">Catatan</span><span class="iv" id="i-catatan" style="color:var(--gray-600)">—</span></div>
-  </div>
-
-  <!-- PENANGGUNG JAWAB -->
-  <div class="sec anim">
-    <div class="sec-hdr"><div class="sec-icon">👤</div><span class="sec-title">Penanggung Jawab</span></div>
-    <div class="pj-row">
-      <div class="pj-av" id="pj-av">—</div>
-      <div>
-        <div class="pj-name" id="pj-name">—</div>
-        <div class="pj-role" id="pj-ruang">—</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- RIWAYAT -->
-  <div class="sec anim">
-    <div class="sec-hdr"><div class="sec-icon">📋</div><span class="sec-title">Riwayat Pemeliharaan</span></div>
-    <div id="riwayat-list"><div class="empty-rw">Memuat riwayat...</div></div>
-  </div>
-
-  <!-- FORM TAMBAH CATATAN -->
-  <div class="form-wrap anim">
-    <button class="form-toggle" onclick="toggleForm()">
-      <span>➕</span> Tambah Catatan / Catat Kegiatan
-    </button>
-    <div class="form-panel" id="form-panel">
-      <div class="form-hdr"><span>📝 Catat Kegiatan Pemeliharaan</span></div>
-      <div class="form-body">
-        <div class="f-group">
-          <label>Jenis Kegiatan *</label>
-          <select id="f-jenis">
-            <option value="">-- Pilih --</option>
-            <option value="Kalibrasi Berkala">Kalibrasi Berkala</option>
-            <option value="Perawatan Rutin">Perawatan Rutin</option>
-            <option value="Perbaikan">Perbaikan</option>
-            <option value="Inspeksi">Inspeksi</option>
-            <option value="Penggantian Komponen">Penggantian Komponen</option>
-            <option value="Lainnya">Lainnya</option>
-          </select>
-        </div>
-        <div class="f-group half">
-          <div>
-            <label>Tanggal *</label>
-            <input type="date" id="f-tanggal">
-          </div>
-          <div>
-            <label>Pelaksana *</label>
-            <input type="text" id="f-pelaksana" placeholder="Nama / Instansi">
-          </div>
-        </div>
-        <div class="f-group">
-          <label>Keterangan / Hasil *</label>
-          <textarea id="f-ket" placeholder="Tuliskan hasil kegiatan, kondisi alat, atau catatan penting..."></textarea>
-        </div>
-        <div class="f-group" id="kalib-next-group" style="display:none">
-          <label>Kalibrasi Berikutnya (isi jika kalibrasi)</label>
-          <input type="date" id="f-kalib-next">
-        </div>
-        <div class="f-group half">
-          <div>
-            <label>Biaya (Rp)</label>
-            <input type="number" id="f-biaya" placeholder="0">
-          </div>
-          <div>
-            <label>Dicatat Oleh *</label>
-            <input type="text" id="f-pencatat" placeholder="Nama staf">
-          </div>
-        </div>
-        <div class="form-actions">
-          <button class="btn-cancel" onclick="toggleForm()">Batal</button>
-          <button class="btn-submit" id="btn-simpan" onclick="simpanCatatan()">💾 Simpan ke Sheets</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- TOAST notifikasi -->
-  <div class="toast" id="toast"></div>
-
-  <!-- FOOTER -->
-  <div class="footer">
-    <strong>RS TNI AU — Sistem Monitoring Alat Kesehatan</strong><br>
-    Aksi Perubahan Digitalisasi Alkes &nbsp;·&nbsp; Data diperbarui realtime
-  </div>
-
-</div><!-- /main -->
-
-<script>
 // ============================================================
-//  ⚠️  GANTI URL INI setelah deploy Google Apps Script
-//  Cara dapat URL: di Apps Script klik Deploy > New deployment
+//  SISTEM MONITORING ALAT KESEHATAN — RS TNI AU
+//  Google Apps Script  |  Versi 2 (CORS Fix)
 // ============================================================
-var SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxXQ-m9kOMAThQ4PPMFzrKCBXJARvB9cP_j9RQoofIqIfyXLsfkrypx6Hh2z7u_UnZEOQ/exec";
 
-// Ambil kode alat dari URL: alat.html?kode=ALKES-0001
-var params = new URLSearchParams(window.location.search);
-var KODE   = params.get("kode") || "";
+var SPREADSHEET_ID = "1WWilWzD2RS3EWPv5sP4NZS7UcM-7Dev2tzyL9qfzLrA";
+var SHEET_DATABASE = "📋 Database Alkes";
+var SHEET_RIWAYAT  = "📝 Riwayat Pemeliharaan";
 
-// ── Inisialisasi ──────────────────────────────────────────
-window.onload = function() {
-  // Set tanggal hari ini sebagai default form
-  document.getElementById("f-tanggal").value = new Date().toISOString().split("T")[0];
+// ============================================================
+//  FUNGSI UTAMA — semua request lewat doGet (GET saja)
+// ============================================================
+function doGet(e) {
+  var action = e.parameter.action || "getAlat";
+  var kode   = e.parameter.kode   || "";
 
-  if (!KODE) {
-    showError("URL tidak memiliki parameter kode alat. Contoh: alat.html?kode=ALKES-0001");
-    return;
-  }
-
-  // Tampilkan kode di badge sementara loading
-  document.getElementById("kode-badge").textContent = KODE;
-  muatDataAlat();
-};
-
-// ── Muat data alat dari Google Sheets ────────────────────
-function muatDataAlat() {
-  fetch(SCRIPT_URL + "?action=getAlat&kode=" + encodeURIComponent(KODE))
-    .then(function(r) { return r.json(); })
-    .then(function(d) {
-      if (d.error) { showError(d.error); return; }
-      renderAlat(d);
-      muatRiwayat();
-    })
-    .catch(function(err) {
-      showError("Gagal terhubung ke server. Pastikan koneksi internet aktif.\n" + err.message);
-    });
-}
-
-function muatRiwayat() {
-  fetch(SCRIPT_URL + "?action=getRiwayat&kode=" + encodeURIComponent(KODE))
-    .then(function(r) { return r.json(); })
-    .then(function(d) {
-      renderRiwayat(d.riwayat || []);
-    })
-    .catch(function() {
-      document.getElementById("riwayat-list").innerHTML =
-        '<div class="empty-rw">Gagal memuat riwayat.</div>';
-    });
-}
-
-// ── Render data alat ke halaman ───────────────────────────
-function renderAlat(d) {
-  // Header
-  document.getElementById("kode-badge").textContent = d.kode;
-  document.getElementById("nama-alat").textContent  = d.nama;
-  document.getElementById("sub-alat").textContent   = "SN: " + d.nomorSeri + "  ·  " + d.merek;
-
-  // Status dot
-  var dot  = document.getElementById("status-dot");
-  var lbl  = document.getElementById("status-label");
-  var cond = (d.kondisi || "").toLowerCase();
-  if (cond === "baik") {
-    dot.className = "dot baik"; lbl.textContent = "Kondisi Baik"; lbl.className = "lbl-baik";
-  } else if (cond.includes("rusak")) {
-    dot.className = "dot rusak"; lbl.textContent = "Rusak / Perbaikan"; lbl.className = "lbl-rusak";
+  var result;
+  if (action === "getAlat") {
+    result = getDataAlat(kode);
+  } else if (action === "getRiwayat") {
+    result = getRiwayatAlat(kode);
+  } else if (action === "tambahRiwayat") {
+    result = tambahRiwayatDariGet(e.parameter);
+  } else if (action === "updateStatus") {
+    result = updateStatusAlat(e.parameter);
   } else {
-    dot.className = "dot warn"; lbl.textContent = d.kondisi; lbl.className = "lbl-warn";
+    result = { error: "Action tidak dikenal" };
   }
 
-  // Kalibrasi
-  document.getElementById("kalib-next-top").textContent = d.kalibBerikutnya;
-  document.getElementById("kalib-last").textContent     = d.kalibTerakhir;
-  document.getElementById("kalib-next").textContent     = d.kalibBerikutnya;
+  // CORS header lewat callback/JSONP tidak diperlukan —
+  // cukup kembalikan JSON biasa, Apps Script sudah handle CORS untuk GET
+  var output = ContentService
+    .createTextOutput(JSON.stringify(result))
+    .setMimeType(ContentService.MimeType.JSON);
 
-  var sisa  = d.sisaHari;
-  var sisaEl = document.getElementById("sisa-hari");
-  var fillEl = document.getElementById("sisa-fill");
-  var statEl = document.getElementById("status-kalib");
-
-  if (sisa === null) {
-    sisaEl.textContent = "-";
-  } else if (sisa < 0) {
-    sisaEl.textContent  = Math.abs(sisa) + " hari (terlambat)";
-    sisaEl.className    = "v late";
-    fillEl.style.width  = "100%";
-    fillEl.style.background = "#EF4444";
-    statEl.textContent  = "🔴 Terlambat";
-    statEl.className    = "v late";
-  } else if (sisa <= 30) {
-    sisaEl.textContent  = sisa + " hari lagi";
-    sisaEl.className    = "v warn";
-    fillEl.style.width  = Math.round((365-sisa)/365*100) + "%";
-    fillEl.style.background = "#F59E0B";
-    statEl.textContent  = "🟡 Segera";
-    statEl.className    = "v warn";
-  } else if (sisa <= 90) {
-    sisaEl.textContent  = sisa + " hari lagi";
-    sisaEl.className    = "v";
-    fillEl.style.width  = Math.round((365-sisa)/365*100) + "%";
-    fillEl.style.background = "#3B82F6";
-    statEl.textContent  = "🔵 Dekat";
-  } else {
-    sisaEl.textContent  = sisa + " hari lagi";
-    sisaEl.className    = "v ok";
-    fillEl.style.width  = Math.round((365-sisa)/365*100) + "%";
-    fillEl.style.background = "#22C55E";
-    statEl.textContent  = "🟢 Normal";
-    statEl.className    = "v ok";
-    document.querySelector(".sisa-bar").style.display = "none";
-  }
-
-  // Info alat
-  document.getElementById("i-nama").textContent  = d.nama;
-  document.getElementById("i-kode").textContent  = d.kode;
-  document.getElementById("i-merek").textContent = d.merek;
-  document.getElementById("i-seri").textContent  = d.nomorSeri;
-  document.getElementById("i-kat").textContent   = d.kategori;
-  document.getElementById("i-ruang").textContent = d.ruangan;
-  document.getElementById("i-tahun").textContent = d.tahunPengadaan;
-  document.getElementById("i-catatan").textContent = d.catatan || "—";
-
-  // PJ
-  var pj = d.penanggungjawab || "—";
-  var inisial = pj.split(" ").map(function(w){return w[0]}).join("").substring(0,2).toUpperCase();
-  document.getElementById("pj-av").textContent   = inisial;
-  document.getElementById("pj-name").textContent = pj;
-  document.getElementById("pj-ruang").textContent = "Penanggung Jawab · " + d.ruangan;
-
-  // Tampilkan halaman
-  document.getElementById("loading").style.display = "none";
-  document.getElementById("main").style.display    = "block";
+  return output;
 }
 
-// ── Render riwayat ────────────────────────────────────────
-function renderRiwayat(list) {
-  var el = document.getElementById("riwayat-list");
-  if (!list || list.length === 0) {
-    el.innerHTML = '<div class="empty-rw">Belum ada riwayat pemeliharaan tercatat.</div>';
-    return;
-  }
-  el.innerHTML = list.map(function(r, i) {
-    var dotClass = r.jenis.toLowerCase().includes("kalib") ? "k"
-                 : r.jenis.toLowerCase().includes("rusak") ? "x" : "r";
-    var badge = r.hasil.toLowerCase().includes("lulus") || r.hasil.toLowerCase().includes("selesai")
-               ? '<span class="rw-badge ok">✓ ' + (r.hasil.length > 30 ? "Selesai" : r.hasil) + '</span>'
-               : r.hasil.toLowerCase().includes("rusak") || r.hasil.toLowerCase().includes("gagal")
-               ? '<span class="rw-badge err">⚠ Perlu Tindak Lanjut</span>'
-               : '<span class="rw-badge warn">→ ' + r.jenis + '</span>';
-    var line = i < list.length - 1 ? '<div class="rw-line"></div>' : '';
-    return '<div class="rw-item">' +
-      '<div class="rw-dot-w"><div class="rw-dot ' + dotClass + '"></div>' + line + '</div>' +
-      '<div class="rw-content">' +
-        '<div class="rw-tgl">' + r.tanggal.toUpperCase() + '</div>' +
-        '<div class="rw-jenis">' + r.jenis + '</div>' +
-        '<div class="rw-ket">' + r.pelaksana + (r.hasil ? ' — ' + r.hasil : '') + '</div>' +
-        badge +
-      '</div></div>';
-  }).join("");
-}
+// ============================================================
+//  BACA DATA ALAT
+// ============================================================
+function getDataAlat(kode) {
+  try {
+    var ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
+    var sheet = ss.getSheetByName(SHEET_DATABASE);
+    var data  = sheet.getDataRange().getValues();
 
-// ── Form tambah catatan ───────────────────────────────────
-function toggleForm() {
-  var panel = document.getElementById("form-panel");
-  panel.classList.toggle("open");
-}
+    for (var i = 3; i < data.length; i++) {
+      var row = data[i];
+      if (String(row[1]).trim() === kode.trim()) {
+        var kalibBerikutnya = row[11] ? new Date(row[11]) : null;
+        var sisaHari = kalibBerikutnya
+          ? Math.round((kalibBerikutnya - new Date()) / (1000 * 60 * 60 * 24))
+          : null;
 
-document.addEventListener("change", function(e) {
-  if (e.target.id === "f-jenis") {
-    var isKalib = e.target.value === "Kalibrasi Berkala";
-    document.getElementById("kalib-next-group").style.display = isKalib ? "block" : "none";
-  }
-});
-
-function simpanCatatan() {
-  var jenis    = document.getElementById("f-jenis").value;
-  var tanggal  = document.getElementById("f-tanggal").value;
-  var pelaksana= document.getElementById("f-pelaksana").value;
-  var ket      = document.getElementById("f-ket").value;
-  var pencatat = document.getElementById("f-pencatat").value;
-  var biaya    = document.getElementById("f-biaya").value;
-  var kalibNext= document.getElementById("f-kalib-next").value;
-
-  if (!jenis || !tanggal || !pelaksana || !ket || !pencatat) {
-    tampilkanToast("Mohon lengkapi semua field yang wajib diisi (*).", false);
-    return;
-  }
-
-  var btn = document.getElementById("btn-simpan");
-  btn.disabled = true;
-  btn.textContent = "⏳ Menyimpan...";
-
-  var namaAlat = document.getElementById("i-nama").textContent;
-
-  fetch(SCRIPT_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      action     : "tambahRiwayat",
-      kode       : KODE,
-      namaAlat   : namaAlat,
-      jenis      : jenis,
-      tanggal    : tanggal,
-      pelaksana  : pelaksana,
-      keterangan : ket,
-      dicatatOleh: pencatat,
-      biaya      : biaya,
-      kalibBerikutnya: kalibNext || null
-    })
-  })
-  .then(function(r) { return r.json(); })
-  .then(function(d) {
-    if (d.sukses) {
-      tampilkanToast("✅ " + d.pesan, true);
-      document.getElementById("form-panel").classList.remove("open");
-      // Refresh riwayat
-      setTimeout(function() { muatRiwayat(); muatDataAlat(); }, 1500);
-      // Reset form
-      ["f-jenis","f-pelaksana","f-ket","f-pencatat","f-biaya","f-kalib-next"].forEach(function(id){
-        document.getElementById(id).value = "";
-      });
-    } else {
-      tampilkanToast("❌ Gagal menyimpan: " + (d.error || "Terjadi kesalahan."), false);
+        return {
+          no             : row[0],
+          kode           : row[1],
+          nama           : row[2],
+          kategori       : row[3],
+          merek          : row[4],
+          nomorSeri      : row[5],
+          ruangan        : row[6],
+          penanggungjawab: row[7],
+          tahunPengadaan : row[8],
+          kondisi        : row[9],
+          kalibTerakhir  : row[10] ? Utilities.formatDate(new Date(row[10]), "Asia/Jakarta", "dd MMM yyyy") : "-",
+          kalibBerikutnya: kalibBerikutnya ? Utilities.formatDate(kalibBerikutnya, "Asia/Jakarta", "dd MMM yyyy") : "-",
+          sisaHari       : sisaHari,
+          statusKalibrasi: row[13],
+          catatan        : row[15],
+          diperbarui     : row[16] ? Utilities.formatDate(new Date(row[16]), "Asia/Jakarta", "dd MMM yyyy") : "-"
+        };
+      }
     }
-  })
-  .catch(function(err) {
-    tampilkanToast("❌ Koneksi gagal. Periksa jaringan internet.", false);
-  })
-  .finally(function() {
-    btn.disabled = false;
-    btn.textContent = "💾 Simpan ke Sheets";
-  });
+    return { error: "Alat dengan kode " + kode + " tidak ditemukan" };
+
+  } catch (err) {
+    return { error: err.message };
+  }
 }
 
-function tampilkanToast(pesan, sukses) {
-  var el = document.getElementById("toast");
-  el.textContent = pesan;
-  el.className   = "toast " + (sukses ? "ok" : "err");
-  el.scrollIntoView({ behavior:"smooth", block:"nearest" });
-  if (sukses) setTimeout(function(){ el.className = "toast"; }, 5000);
+// ============================================================
+//  BACA RIWAYAT PEMELIHARAAN
+// ============================================================
+function getRiwayatAlat(kode) {
+  try {
+    var ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
+    var sheet = ss.getSheetByName(SHEET_RIWAYAT);
+    var data  = sheet.getDataRange().getValues();
+    var hasil = [];
+
+    for (var i = 3; i < data.length; i++) {
+      var row = data[i];
+      if (String(row[1]).trim() === kode.trim() && row[1] !== "") {
+        hasil.push({
+          tanggal    : row[3] ? Utilities.formatDate(new Date(row[3]), "Asia/Jakarta", "dd MMM yyyy") : "-",
+          jenis      : row[4],
+          pelaksana  : row[5],
+          hasil      : row[6],
+          biaya      : row[7] ? Number(row[7]).toLocaleString("id-ID") : "0",
+          dicatatOleh: row[9]
+        });
+      }
+    }
+
+    hasil.sort(function(a, b) {
+      return new Date(b.tanggal) - new Date(a.tanggal);
+    });
+
+    return { riwayat: hasil };
+
+  } catch (err) {
+    return { error: err.message };
+  }
 }
 
-function showError(msg) {
-  document.getElementById("loading").style.display    = "none";
-  document.getElementById("error-state").style.display = "block";
-  document.getElementById("error-msg").textContent    = msg;
+// ============================================================
+//  TAMBAH RIWAYAT — via GET parameter
+// ============================================================
+function tambahRiwayatDariGet(p) {
+  try {
+    var ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
+    var sheet = ss.getSheetByName(SHEET_RIWAYAT);
+    var lastRow = sheet.getLastRow();
+    var newRow  = lastRow + 1;
+    var no      = lastRow - 2;
+
+    var tanggal = new Date(p.tanggal);
+
+    sheet.getRange(newRow, 1).setValue(no);
+    sheet.getRange(newRow, 2).setValue(p.kode);
+    sheet.getRange(newRow, 3).setValue(p.namaAlat);
+    sheet.getRange(newRow, 4).setValue(tanggal);
+    sheet.getRange(newRow, 4).setNumberFormat("DD MMM YYYY");
+    sheet.getRange(newRow, 5).setValue(p.jenis);
+    sheet.getRange(newRow, 6).setValue(p.pelaksana);
+    sheet.getRange(newRow, 7).setValue(p.keterangan);
+    sheet.getRange(newRow, 8).setValue(p.biaya ? Number(p.biaya) : 0);
+    sheet.getRange(newRow, 9).setValue(p.dokumen || "");
+    sheet.getRange(newRow, 10).setValue(p.dicatatOleh);
+
+    if (p.jenis === "Kalibrasi Berkala" && p.kalibBerikutnya) {
+      updateKalibrasi(p.kode, tanggal, new Date(p.kalibBerikutnya));
+    }
+
+    return { sukses: true, pesan: "Data berhasil disimpan ke Google Sheets!" };
+
+  } catch (err) {
+    return { sukses: false, error: err.message };
+  }
 }
-</script>
-</body>
-</html>
+
+// ============================================================
+//  UPDATE STATUS ALAT
+// ============================================================
+function updateStatusAlat(p) {
+  try {
+    var ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
+    var sheet = ss.getSheetByName(SHEET_DATABASE);
+    var rows  = sheet.getDataRange().getValues();
+
+    for (var i = 3; i < rows.length; i++) {
+      if (String(rows[i][1]).trim() === p.kode.trim()) {
+        sheet.getRange(i + 1, 10).setValue(p.kondisi);
+        sheet.getRange(i + 1, 16).setValue(p.catatan);
+        sheet.getRange(i + 1, 17).setValue(new Date());
+        return { sukses: true, pesan: "Status alat berhasil diperbarui!" };
+      }
+    }
+    return { sukses: false, error: "Kode alat tidak ditemukan" };
+
+  } catch (err) {
+    return { sukses: false, error: err.message };
+  }
+}
+
+// ============================================================
+//  UPDATE TANGGAL KALIBRASI
+// ============================================================
+function updateKalibrasi(kode, kalibTerakhir, kalibBerikutnya) {
+  try {
+    var ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
+    var sheet = ss.getSheetByName(SHEET_DATABASE);
+    var data  = sheet.getDataRange().getValues();
+
+    for (var i = 3; i < data.length; i++) {
+      if (String(data[i][1]).trim() === kode.trim()) {
+        sheet.getRange(i + 1, 11).setValue(kalibTerakhir);
+        sheet.getRange(i + 1, 11).setNumberFormat("DD MMM YYYY");
+        sheet.getRange(i + 1, 12).setValue(kalibBerikutnya);
+        sheet.getRange(i + 1, 12).setNumberFormat("DD MMM YYYY");
+        sheet.getRange(i + 1, 17).setValue(new Date());
+        break;
+      }
+    }
+  } catch (err) {
+    Logger.log("Error update kalibrasi: " + err.message);
+  }
+}
