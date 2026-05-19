@@ -178,14 +178,15 @@
       <div class="hdr-sub" id="sub-alat">—</div>
     </div>
     <div class="photo-area" id="photo-area">
-      <div class="photo-placeholder">
+      <div class="photo-placeholder" id="photo-placeholder">
         <svg viewBox="0 0 48 48" fill="none" stroke="white" stroke-width="1.5">
           <rect x="4" y="10" width="40" height="30" rx="4"/>
           <circle cx="24" cy="25" r="8"/>
           <circle cx="38" cy="16" r="2" fill="white"/>
         </svg>
-        <span>FOTO ALAT</span>
+        <span>FOTO BELUM TERSEDIA</span>
       </div>
+      <img id="foto-alat" src="" alt="Foto Alat" style="display:none; width:100%; height:100%; object-fit:cover; opacity:.9;">
     </div>
   </div>
 
@@ -365,12 +366,33 @@ function muatRiwayat() {
     });
 }
 
+// ── Load foto alat otomatis berdasarkan kode ─────────────
+function muatFotoAlat(kode) {
+  var BASE = "https://alkesrsaumanado-maker.github.io/alkes-rstniau/";
+  var extensions = ["jpg", "jpeg", "png", "JPG", "JPEG", "PNG"];
+  var idx = 0;
+  function coba() {
+    if (idx >= extensions.length) return;
+    var img = document.getElementById("foto-alat");
+    img.src = BASE + kode + "." + extensions[idx];
+    img.onload = function() {
+      document.getElementById("photo-placeholder").style.display = "none";
+      img.style.display = "block";
+    };
+    img.onerror = function() { idx++; coba(); };
+  }
+  coba();
+}
+
 // ── Render data alat ke halaman ───────────────────────────
 function renderAlat(d) {
   // Header
   document.getElementById("kode-badge").textContent = d.kode;
   document.getElementById("nama-alat").textContent  = d.nama;
   document.getElementById("sub-alat").textContent   = "SN: " + d.nomorSeri + "  ·  " + d.merek;
+
+  // Load foto otomatis
+  muatFotoAlat(d.kode);
 
   // Status dot
   var dot  = document.getElementById("status-dot");
