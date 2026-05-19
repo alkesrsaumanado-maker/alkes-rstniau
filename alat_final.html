@@ -143,6 +143,26 @@
   .footer strong { color:var(--gray-600); }
 
   /* Animasi */
+
+  /* ── PIN Modal ── */
+  .pin-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:999; align-items:center; justify-content:center; }
+  .pin-overlay.show { display:flex; }
+  .pin-box { background:#fff; border-radius:16px; padding:24px 20px; width:300px; max-width:90vw; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,0.3); }
+  .pin-icon { font-size:32px; margin-bottom:12px; }
+  .pin-box h3 { font-size:16px; font-weight:600; color:var(--gray-800); margin-bottom:6px; }
+  .pin-box p { font-size:12px; color:var(--gray-400); margin-bottom:16px; }
+  .pin-dots { display:flex; justify-content:center; gap:10px; margin-bottom:16px; }
+  .pin-dot { width:12px; height:12px; border-radius:50%; background:var(--gray-200); transition:background .2s; }
+  .pin-dot.filled { background:var(--blue); }
+  .pin-keypad { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:12px; }
+  .pin-key { padding:14px; font-size:18px; font-weight:500; background:var(--gray-50); border:1px solid var(--gray-200); border-radius:10px; cursor:pointer; color:var(--gray-800); }
+  .pin-key:hover { background:var(--blue-l); border-color:var(--blue-b); }
+  .pin-key:active { transform:scale(.95); }
+  .pin-key.del { font-size:14px; color:var(--gray-600); }
+  .pin-key.empty { background:transparent; border:none; cursor:default; }
+  .pin-error { font-size:12px; color:var(--red); margin-top:4px; display:none; }
+  .pin-cancel { font-size:12px; color:var(--gray-400); margin-top:10px; cursor:pointer; text-decoration:underline; background:none; border:none; }
+
   @keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
   .anim { animation:fadeUp .3s ease both; }
 </style>
@@ -310,6 +330,38 @@
   <div class="footer">
     <strong>RS TNI AU — Sistem Monitoring Alat Kesehatan</strong><br>
     Aksi Perubahan Digitalisasi Alkes &nbsp;·&nbsp; Data diperbarui realtime
+  </div>
+
+
+  <!-- PIN MODAL -->
+  <div class="pin-overlay" id="pinOverlay">
+    <div class="pin-box">
+      <div class="pin-icon">🔐</div>
+      <h3>Masukkan PIN</h3>
+      <p>Fitur pencatatan hanya untuk staf yang berwenang</p>
+      <div class="pin-dots">
+        <div class="pin-dot" id="pd0"></div>
+        <div class="pin-dot" id="pd1"></div>
+        <div class="pin-dot" id="pd2"></div>
+        <div class="pin-dot" id="pd3"></div>
+      </div>
+      <div class="pin-keypad">
+        <button class="pin-key" onclick="pinInput('1')">1</button>
+        <button class="pin-key" onclick="pinInput('2')">2</button>
+        <button class="pin-key" onclick="pinInput('3')">3</button>
+        <button class="pin-key" onclick="pinInput('4')">4</button>
+        <button class="pin-key" onclick="pinInput('5')">5</button>
+        <button class="pin-key" onclick="pinInput('6')">6</button>
+        <button class="pin-key" onclick="pinInput('7')">7</button>
+        <button class="pin-key" onclick="pinInput('8')">8</button>
+        <button class="pin-key" onclick="pinInput('9')">9</button>
+        <button class="pin-key empty"></button>
+        <button class="pin-key" onclick="pinInput('0')">0</button>
+        <button class="pin-key del" onclick="pinHapus()">⌫</button>
+      </div>
+      <div class="pin-error" id="pinError">❌ PIN salah, coba lagi</div>
+      <button class="pin-cancel" onclick="tutupPin()">Batal</button>
+    </div>
   </div>
 
 </div><!-- /main -->
@@ -498,10 +550,70 @@ function renderRiwayat(list) {
 }
 
 // ── Form tambah catatan ───────────────────────────────────
+
+// ── PIN Security ─────────────────────────────────────────
+// ⚠️ GANTI PIN DI SINI sesuai keinginan (4 digit angka)
+var PIN_BENAR = "0431";
+var pinInput_val = "";
+var pinVerified = false;
+
 function toggleForm() {
-  var panel = document.getElementById("form-panel");
-  panel.classList.toggle("open");
+  if (pinVerified) {
+    // Sudah verifikasi, langsung buka/tutup form
+    var panel = document.getElementById("form-panel");
+    panel.classList.toggle("open");
+  } else {
+    // Belum verifikasi, tampilkan PIN
+    pinInput_val = "";
+    updatePinDots();
+    document.getElementById("pinError").style.display = "none";
+    document.getElementById("pinOverlay").classList.add("show");
+  }
 }
+
+function pinInput(angka) {
+  if (pinInput_val.length >= 4) return;
+  pinInput_val += angka;
+  updatePinDots();
+  if (pinInput_val.length === 4) {
+    setTimeout(cekPin, 200);
+  }
+}
+
+function pinHapus() {
+  pinInput_val = pinInput_val.slice(0, -1);
+  updatePinDots();
+  document.getElementById("pinError").style.display = "none";
+}
+
+function updatePinDots() {
+  for (var i = 0; i < 4; i++) {
+    var dot = document.getElementById("pd" + i);
+    dot.className = "pin-dot" + (i < pinInput_val.length ? " filled" : "");
+  }
+}
+
+function cekPin() {
+  if (pinInput_val === PIN_BENAR) {
+    pinVerified = true;
+    document.getElementById("pinOverlay").classList.remove("show");
+    // Buka form setelah PIN benar
+    document.getElementById("form-panel").classList.add("open");
+    // Reset setelah 10 menit
+    setTimeout(function() { pinVerified = false; }, 10 * 60 * 1000);
+  } else {
+    document.getElementById("pinError").style.display = "block";
+    pinInput_val = "";
+    updatePinDots();
+  }
+}
+
+function tutupPin() {
+  document.getElementById("pinOverlay").classList.remove("show");
+  pinInput_val = "";
+  updatePinDots();
+}
+
 
 document.addEventListener("change", function(e) {
   if (e.target.id === "f-jenis") {
