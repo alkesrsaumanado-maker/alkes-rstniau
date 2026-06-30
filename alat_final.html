@@ -124,6 +124,17 @@
   .btn-lapor:hover { background:#B91C1C; }
   .btn-lapor:disabled { background:var(--gray-400); cursor:not-allowed; }
 
+  /* ── Tandai Sudah Diperbaiki ── */
+  .tandai-toggle { width:100%; padding:12px 16px; background:#F0FDF4; border:1px solid #86EFAC; border-radius:14px; text-align:center; font-size:13px; font-weight:600; color:var(--green); cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; margin-top:8px; }
+  .tandai-toggle:hover { background:#DCFCE7; }
+  .tandai-panel { display:none; background:#fff; border:1px solid #86EFAC; border-radius:14px; overflow:hidden; margin-top:8px; }
+  .tandai-panel.open { display:block; }
+  .tandai-hdr { background:#F0FDF4; padding:12px 14px; border-bottom:1px solid #86EFAC; }
+  .tandai-hdr span { font-size:12px; font-weight:600; color:var(--green); text-transform:uppercase; letter-spacing:.05em; }
+  .btn-tandai { flex:1; padding:12px; background:var(--green); color:#fff; font-size:13px; font-weight:600; border:none; border-radius:8px; cursor:pointer; font-family:'DM Sans',sans-serif; }
+  .btn-tandai:hover { background:#15803D; }
+  .btn-tandai:disabled { background:var(--gray-400); cursor:not-allowed; }
+
   .form-toggle { width:100%; padding:12px 16px; background:#fff; border:1px solid var(--gray-200); border-radius:var(--r); text-align:center; font-size:13px; font-weight:600; color:var(--blue); cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; }
   .form-toggle:hover { background:var(--blue-l); }
   .form-panel { display:none; background:#fff; border:1px solid var(--blue-b); border-radius:var(--r); overflow:hidden; margin-top:8px; }
@@ -359,6 +370,34 @@
     </div>
   </div>
 
+  <!-- TANDAI SUDAH DIPERBAIKI (muncul hanya jika status Rusak) -->
+  <div class="form-wrap anim" id="tandai-wrap" style="display:none">
+    <button class="tandai-toggle" onclick="toggleTandai()">
+      <span>✅</span> Tandai Sudah Diperbaiki
+    </button>
+    <div class="tandai-panel" id="tandai-panel">
+      <div class="tandai-hdr"><span>✅ Konfirmasi Alat Sudah Diperbaiki</span></div>
+      <div class="form-body">
+        <div class="f-group">
+          <label>Keterangan Perbaikan</label>
+          <textarea id="t-ket" placeholder="Contoh: Sudah diganti komponen, alat berfungsi normal kembali...">Alat sudah diperbaiki dan berfungsi normal</textarea>
+        </div>
+        <div class="f-group">
+          <label>Pelaksana Perbaikan *</label>
+          <input type="text" id="t-pelaksana" placeholder="Nama teknisi / vendor">
+        </div>
+        <div class="f-group">
+          <label>Biaya Perbaikan (Rp)</label>
+          <input type="number" id="t-biaya" placeholder="0">
+        </div>
+        <div class="form-actions">
+          <button class="btn-cancel" onclick="toggleTandai()">Batal</button>
+          <button class="btn-tandai" id="btn-tandai" onclick="kirimTandaiDiperbaiki()">✅ Konfirmasi Selesai</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- TOAST notifikasi -->
   <div class="toast" id="toast"></div>
 
@@ -517,12 +556,16 @@ function renderAlat(d) {
   var dot  = document.getElementById("status-dot");
   var lbl  = document.getElementById("status-label");
   var cond = (d.kondisi || "").toLowerCase();
+  var tombolPerbaikan = document.getElementById("tandai-wrap");
   if (cond === "baik") {
     dot.className = "dot baik"; lbl.textContent = "Kondisi Baik"; lbl.className = "lbl-baik";
+    tombolPerbaikan.style.display = "none";
   } else if (cond.includes("rusak")) {
     dot.className = "dot rusak"; lbl.textContent = "Rusak / Perbaikan"; lbl.className = "lbl-rusak";
+    tombolPerbaikan.style.display = "block";
   } else {
     dot.className = "dot warn"; lbl.textContent = d.kondisi; lbl.className = "lbl-warn";
+    tombolPerbaikan.style.display = "none";
   }
 
   // Kalibrasi
@@ -623,6 +666,7 @@ function renderRiwayat(list) {
 var PIN_BENAR = "1234";
 var pinInput_val = "";
 var pinVerified = false;
+var pendingAction = "catat"; // "catat" atau "tandai"
 
 function toggleForm() {
   if (pinVerified) {
@@ -634,6 +678,7 @@ function toggleForm() {
     pinInput_val = "";
     updatePinDots();
     document.getElementById("pinError").style.display = "none";
+    pendingAction = "catat";
     document.getElementById("pinOverlay").classList.add("show");
   }
 }
@@ -664,8 +709,12 @@ function cekPin() {
   if (pinInput_val === PIN_BENAR) {
     pinVerified = true;
     document.getElementById("pinOverlay").classList.remove("show");
-    // Buka form setelah PIN benar
-    document.getElementById("form-panel").classList.add("open");
+    // Buka panel yang sesuai berdasarkan tombol yang ditekan
+    if (pendingAction === "tandai") {
+      document.getElementById("tandai-panel").classList.add("open");
+    } else {
+      document.getElementById("form-panel").classList.add("open");
+    }
     // Reset setelah 10 menit
     setTimeout(function() { pinVerified = false; }, 10 * 60 * 1000);
   } else {
@@ -853,6 +902,66 @@ function kirimLaporan() {
   .finally(function() {
     btn.disabled = false;
     btn.textContent = "⚠️ Kirim Laporan";
+  });
+}
+
+// ── Tandai Sudah Diperbaiki — pakai PIN yang sama dengan tambah catatan ──
+function toggleTandai() {
+  if (pinVerified) {
+    document.getElementById("tandai-panel").classList.toggle("open");
+  } else {
+    pinInput_val = "";
+    updatePinDots();
+    document.getElementById("pinError").style.display = "none";
+    pendingAction = "tandai";
+    document.getElementById("pinOverlay").classList.add("show");
+  }
+}
+
+function kirimTandaiDiperbaiki() {
+  var ket       = document.getElementById("t-ket").value;
+  var pelaksana = document.getElementById("t-pelaksana").value;
+  var biaya     = document.getElementById("t-biaya").value;
+
+  if (!pelaksana) {
+    tampilkanToast("Mohon isi nama pelaksana perbaikan.", false);
+    return;
+  }
+
+  var btn = document.getElementById("btn-tandai");
+  btn.disabled = true;
+  btn.textContent = "⏳ Menyimpan...";
+
+  var namaAlat = document.getElementById("i-nama").textContent;
+
+  var params = new URLSearchParams({
+    action     : "tandaiDiperbaiki",
+    kode       : KODE,
+    namaAlat   : namaAlat,
+    keterangan : ket || "Alat sudah diperbaiki dan berfungsi normal",
+    pelaksana  : pelaksana,
+    biaya      : biaya || "0"
+  });
+
+  fetch(SCRIPT_URL + "?" + params.toString(), { method: "GET" })
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    if (d.sukses) {
+      tampilkanToast("✅ " + d.pesan, true);
+      document.getElementById("tandai-panel").classList.remove("open");
+      setTimeout(function() { muatRiwayat(); muatDataAlat(); }, 1500);
+      document.getElementById("t-pelaksana").value = "";
+      document.getElementById("t-biaya").value = "";
+    } else {
+      tampilkanToast("❌ Gagal menyimpan: " + (d.error || "Terjadi kesalahan."), false);
+    }
+  })
+  .catch(function(err) {
+    tampilkanToast("❌ Koneksi gagal. Periksa jaringan internet.", false);
+  })
+  .finally(function() {
+    btn.disabled = false;
+    btn.textContent = "✅ Konfirmasi Selesai";
   });
 }
 
