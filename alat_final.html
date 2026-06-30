@@ -113,6 +113,17 @@
 
   /* FORM tambah catatan */
   .form-wrap { margin:0 16px 12px; }
+  /* ── Lapor Kerusakan ── */
+  .lapor-toggle { width:100%; padding:12px 16px; background:#FEF2F2; border:1px solid #FCA5A5; border-radius:14px; text-align:center; font-size:13px; font-weight:600; color:var(--red); cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; margin-top:8px; }
+  .lapor-toggle:hover { background:#FEE2E2; }
+  .lapor-panel { display:none; background:#fff; border:1px solid #FCA5A5; border-radius:14px; overflow:hidden; margin-top:8px; }
+  .lapor-panel.open { display:block; }
+  .lapor-hdr { background:#FEF2F2; padding:12px 14px; border-bottom:1px solid #FCA5A5; }
+  .lapor-hdr span { font-size:12px; font-weight:600; color:var(--red); text-transform:uppercase; letter-spacing:.05em; }
+  .btn-lapor { flex:1; padding:12px; background:var(--red); color:#fff; font-size:13px; font-weight:600; border:none; border-radius:8px; cursor:pointer; font-family:'DM Sans',sans-serif; }
+  .btn-lapor:hover { background:#B91C1C; }
+  .btn-lapor:disabled { background:var(--gray-400); cursor:not-allowed; }
+
   .form-toggle { width:100%; padding:12px 16px; background:#fff; border:1px solid var(--gray-200); border-radius:var(--r); text-align:center; font-size:13px; font-weight:600; color:var(--blue); cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; }
   .form-toggle:hover { background:var(--blue-l); }
   .form-panel { display:none; background:#fff; border:1px solid var(--blue-b); border-radius:var(--r); overflow:hidden; margin-top:8px; }
@@ -323,6 +334,31 @@
     </div>
   </div>
 
+
+  <!-- LAPOR KERUSAKAN -->
+  <div class="form-wrap anim">
+    <button class="lapor-toggle" onclick="toggleLapor()">
+      <span>⚠️</span> Lapor Kerusakan Alat
+    </button>
+    <div class="lapor-panel" id="lapor-panel">
+      <div class="lapor-hdr"><span>⚠️ Laporkan Kerusakan Alat</span></div>
+      <div class="form-body">
+        <div class="f-group">
+          <label>Keterangan Masalah *</label>
+          <textarea id="l-ket" placeholder="Contoh: Alat tidak menyala, layar mati, suara tidak normal, dll..."></textarea>
+        </div>
+        <div class="f-group">
+          <label>Nama Pelapor *</label>
+          <input type="text" id="l-pelapor" placeholder="Nama Anda">
+        </div>
+        <div class="form-actions">
+          <button class="btn-cancel" onclick="toggleLapor()">Batal</button>
+          <button class="btn-lapor" id="btn-lapor" onclick="kirimLaporan()">⚠️ Kirim Laporan</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- TOAST notifikasi -->
   <div class="toast" id="toast"></div>
 
@@ -361,6 +397,37 @@
       </div>
       <div class="pin-error" id="pinError">❌ PIN salah, coba lagi</div>
       <button class="pin-cancel" onclick="tutupPin()">Batal</button>
+    </div>
+  </div>
+
+  <!-- PIN MODAL — LAPOR KERUSAKAN -->
+  <div class="pin-overlay" id="pinOverlayLapor">
+    <div class="pin-box">
+      <div class="pin-icon">🔐</div>
+      <h3>Masukkan PIN</h3>
+      <p>Fitur lapor kerusakan hanya untuk staf yang berwenang</p>
+      <div class="pin-dots">
+        <div class="pin-dot" id="pld0"></div>
+        <div class="pin-dot" id="pld1"></div>
+        <div class="pin-dot" id="pld2"></div>
+        <div class="pin-dot" id="pld3"></div>
+      </div>
+      <div class="pin-keypad">
+        <button class="pin-key" onclick="pinInputLapor('1')">1</button>
+        <button class="pin-key" onclick="pinInputLapor('2')">2</button>
+        <button class="pin-key" onclick="pinInputLapor('3')">3</button>
+        <button class="pin-key" onclick="pinInputLapor('4')">4</button>
+        <button class="pin-key" onclick="pinInputLapor('5')">5</button>
+        <button class="pin-key" onclick="pinInputLapor('6')">6</button>
+        <button class="pin-key" onclick="pinInputLapor('7')">7</button>
+        <button class="pin-key" onclick="pinInputLapor('8')">8</button>
+        <button class="pin-key" onclick="pinInputLapor('9')">9</button>
+        <button class="pin-key empty"></button>
+        <button class="pin-key" onclick="pinInputLapor('0')">0</button>
+        <button class="pin-key del" onclick="pinHapusLapor()">⌫</button>
+      </div>
+      <div class="pin-error" id="pinErrorLapor">❌ PIN salah, coba lagi</div>
+      <button class="pin-cancel" onclick="tutupPinLapor()">Batal</button>
     </div>
   </div>
 
@@ -553,7 +620,7 @@ function renderRiwayat(list) {
 
 // ── PIN Security ─────────────────────────────────────────
 // ⚠️ GANTI PIN DI SINI sesuai keinginan (4 digit angka)
-var PIN_BENAR = "0431";
+var PIN_BENAR = "1234";
 var pinInput_val = "";
 var pinVerified = false;
 
@@ -685,6 +752,108 @@ function tampilkanToast(pesan, sukses) {
   el.className   = "toast " + (sukses ? "ok" : "err");
   el.scrollIntoView({ behavior:"smooth", block:"nearest" });
   if (sukses) setTimeout(function(){ el.className = "toast"; }, 5000);
+}
+
+
+// ── Lapor Kerusakan — PIN terpisah ────────────────────────
+var pinInputLapor_val = "";
+var pinVerifiedLapor = false;
+
+function toggleLapor() {
+  if (pinVerifiedLapor) {
+    document.getElementById("lapor-panel").classList.toggle("open");
+  } else {
+    pinInputLapor_val = "";
+    updatePinDotsLapor();
+    document.getElementById("pinErrorLapor").style.display = "none";
+    document.getElementById("pinOverlayLapor").classList.add("show");
+  }
+}
+
+function pinInputLapor(angka) {
+  if (pinInputLapor_val.length >= 4) return;
+  pinInputLapor_val += angka;
+  updatePinDotsLapor();
+  if (pinInputLapor_val.length === 4) {
+    setTimeout(cekPinLapor, 200);
+  }
+}
+
+function pinHapusLapor() {
+  pinInputLapor_val = pinInputLapor_val.slice(0, -1);
+  updatePinDotsLapor();
+  document.getElementById("pinErrorLapor").style.display = "none";
+}
+
+function updatePinDotsLapor() {
+  for (var i = 0; i < 4; i++) {
+    var dot = document.getElementById("pld" + i);
+    dot.className = "pin-dot" + (i < pinInputLapor_val.length ? " filled" : "");
+  }
+}
+
+function cekPinLapor() {
+  if (pinInputLapor_val === PIN_BENAR) {
+    pinVerifiedLapor = true;
+    document.getElementById("pinOverlayLapor").classList.remove("show");
+    document.getElementById("lapor-panel").classList.add("open");
+    setTimeout(function() { pinVerifiedLapor = false; }, 10 * 60 * 1000);
+  } else {
+    document.getElementById("pinErrorLapor").style.display = "block";
+    pinInputLapor_val = "";
+    updatePinDotsLapor();
+  }
+}
+
+function tutupPinLapor() {
+  document.getElementById("pinOverlayLapor").classList.remove("show");
+  pinInputLapor_val = "";
+  updatePinDotsLapor();
+}
+
+function kirimLaporan() {
+  var ket     = document.getElementById("l-ket").value;
+  var pelapor = document.getElementById("l-pelapor").value;
+
+  if (!ket || !pelapor) {
+    tampilkanToast("Mohon isi keterangan masalah dan nama pelapor.", false);
+    return;
+  }
+
+  var btn = document.getElementById("btn-lapor");
+  btn.disabled = true;
+  btn.textContent = "⏳ Mengirim...";
+
+  var namaAlat = document.getElementById("i-nama").textContent;
+
+  var params = new URLSearchParams({
+    action     : "laporKerusakan",
+    kode       : KODE,
+    namaAlat   : namaAlat,
+    keterangan : ket,
+    pelapor    : pelapor
+  });
+
+  fetch(SCRIPT_URL + "?" + params.toString(), { method: "GET" })
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    if (d.sukses) {
+      tampilkanToast("✅ " + d.pesan, true);
+      document.getElementById("lapor-panel").classList.remove("open");
+      setTimeout(function() { muatRiwayat(); muatDataAlat(); }, 1500);
+      document.getElementById("l-ket").value = "";
+      document.getElementById("l-pelapor").value = "";
+    } else {
+      tampilkanToast("❌ Gagal mengirim laporan: " + (d.error || "Terjadi kesalahan."), false);
+    }
+  })
+  .catch(function(err) {
+    tampilkanToast("❌ Koneksi gagal. Periksa jaringan internet.", false);
+  })
+  .finally(function() {
+    btn.disabled = false;
+    btn.textContent = "⚠️ Kirim Laporan";
+  });
 }
 
 function showError(msg) {
